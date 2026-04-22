@@ -1,8 +1,16 @@
 from pathlib import Path
+from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
 from openpyxl import load_workbook
-from datetime import datetime
+
+
+def choose_folder():
+    root = tk.Tk()
+    root.withdraw()
+
+    folder_path = filedialog.askdirectory(title="Select folder containing files")
+    return Path(folder_path) if folder_path else None
 
 
 def get_file_list(folder):
@@ -11,17 +19,17 @@ def get_file_list(folder):
     return files
 
 
-def choose_excel_file():
-    root = tk.Tk()
-    root.withdraw()
+# def choose_excel_file():
+#     root = tk.Tk()
+#     root.withdraw()
 
-    return filedialog.askopenfilename(
-        title="Select Excel file",
-        filetypes=[("Excel files", "*.xlsx")]
-    )
+#     return filedialog.askopenfilename(
+#         title="Select Excel file",
+#         filetypes=[("Excel files", "*.xlsx")]
+#     )
 
 
-def choose_sheet_name(excel_path):
+def choose_sheet_name(excel_path="../../LabWork/HistologySlideBoxInventoryDup.xlsx"):
     wb = load_workbook(excel_path)
     sheet_names = wb.sheetnames
 
@@ -60,13 +68,15 @@ def choose_slide_range():
 
 
 def write_filenames_to_sheet(excel_path, sheet_name, files, start_pos, end_pos, col="J"):
-    from datetime import datetime
-    from openpyxl import load_workbook
-
     wb = load_workbook(excel_path)
     ws = wb[sheet_name]
 
     available_slots = end_pos - start_pos + 1
+
+    if len(files) > available_slots:
+        print(f"Warning: {len(files)} files found but only {available_slots} slots available.")
+        print("Only the first files that fit will be written.")
+
     files_to_write = files[:available_slots]
 
     for i, filename in enumerate(files_to_write):
@@ -74,8 +84,7 @@ def write_filenames_to_sheet(excel_path, sheet_name, files, start_pos, end_pos, 
         excel_row = slide_position + 3
         ws[f"{col}{excel_row}"] = filename
 
-    # 👇 timestamped filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_path = excel_path.replace(".xlsx", f"_updated_{timestamp}.xlsx")
 
     wb.save(output_path)
@@ -84,26 +93,35 @@ def write_filenames_to_sheet(excel_path, sheet_name, files, start_pos, end_pos, 
 
 
 def main():
-    folder = Path("/Users/bb5117/Library/CloudStorage/OneDrive-ImperialCollegeLondon/LabWork/Microscope Images/260416")
+
     col = "J"
+
+    folder = choose_folder()
+    if not folder:
+        print("No folder selected.")
+        return
+
+    print("Selected folder:", folder)
 
     files = get_file_list(folder)
 
-    excel_path = choose_excel_file()
-    if not excel_path:
-        print("No file selected.")
-        return
+    # excel_path = choose_excel_file()
+    # if not excel_path:
+    #     print("No Excel file selected.")
+    #     return
+    excel_pathi="../../LabWork/HistologySlideBoxInventoryDup.xlsx"
 
-    print("Selected file:", excel_path)
+    print("Selected Excel file:", excel_pathi)
 
-    sheet_name = choose_sheet_name(excel_path)
+    sheet_name = choose_sheet_name(excel_pathi)
     print("Selected sheet:", sheet_name)
 
+
     start_pos, end_pos = choose_slide_range()
-    print(f"Writing files for slide positions {start_pos} to {end_pos}")
+    print(f"Writing files for slide positions {start_pos} to {end_pos} in sheet {sheet_name}")
 
     output_path, n_written = write_filenames_to_sheet(
-        excel_path=excel_path,
+        excel_path=excel_pathi,
         sheet_name=sheet_name,
         files=files,
         start_pos=start_pos,
